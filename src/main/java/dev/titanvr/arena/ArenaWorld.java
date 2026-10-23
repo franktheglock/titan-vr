@@ -2,6 +2,7 @@ package dev.titanvr.arena;
 
 import dev.titanvr.TitanConfig;
 import dev.titanvr.TitanMod;
+import dev.titanvr.giant.GiantManager;
 import dev.titanvr.platform.Platform;
 import java.util.ArrayList;
 import java.util.List;
@@ -101,7 +102,18 @@ public final class ArenaWorld {
 
 	/** Between games: count down to the next one while there's a giant and someone to hunt them. */
 	static void tickIdle(MinecraftServer server, Arena arena, ServerLevel level) {
-		if (!arena.dedicated || !TitanConfig.INSTANCE.arenaAutoStart) {
+		if (!arena.dedicated) {
+			return;
+		}
+		// A VR player spawns in the lobby and becomes a giant there; put them down on the arena floor instead
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+			if (p.level() == level && GiantManager.isGiant(p) && arena.inLobby(p.position())) {
+				Vec3 c = arena.floorCenter();
+				p.teleportTo(level, c.x, c.y + 1, c.z, Set.of(), p.getYRot(), 0, false);
+				p.resetFallDistance();
+			}
+		}
+		if (!TitanConfig.INSTANCE.arenaAutoStart) {
 			return;
 		}
 		List<ServerPlayer> players = new ArrayList<>();

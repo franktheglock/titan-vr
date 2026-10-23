@@ -142,6 +142,21 @@ public final class Arena {
 		return distance(p) <= ArenaLayout.LOBBY_RADIUS + 1.5 && y >= ArenaLayout.LOBBY_Y - 0.5 && y <= ArenaLayout.TOP + 4;
 	}
 
+	/** Whether this block is part of the lobby platform, which nothing may break or knock loose. */
+	public static boolean isProtected(Level level, BlockPos pos) {
+		Arena a = current;
+		if (a == null || level.dimension() != a.dimension) {
+			return false;
+		}
+		int dy = pos.getY() - a.center.getY();
+		if (dy < ArenaLayout.LOBBY_Y || dy > ArenaLayout.LOBBY_Y + 1) {
+			return false;
+		}
+		int dx = pos.getX() - a.center.getX(), dz = pos.getZ() - a.center.getZ();
+		int r = ArenaLayout.LOBBY_RADIUS + 2;
+		return dx * dx + dz * dz <= r * r;
+	}
+
 	/** Builds the whole arena right now (for a new arena world, before anyone spawns into the void). */
 	public void buildNow(ServerLevel level) {
 		regenerate();

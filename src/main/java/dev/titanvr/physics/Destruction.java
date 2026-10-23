@@ -1,6 +1,7 @@
 package dev.titanvr.physics;
 
 import dev.titanvr.TitanConfig;
+import dev.titanvr.arena.Arena;
 import dev.titanvr.giant.Giant;
 import dev.titanvr.giant.HandState;
 import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
@@ -51,7 +52,7 @@ public final class Destruction {
 	// ------------------------------------------------------------------ rules
 
 	static boolean breakable(BlockState state, ServerLevel level, BlockPos pos) {
-		if (state.isAir() || state.getDestroySpeed(level, pos) < 0) {
+		if (state.isAir() || state.getDestroySpeed(level, pos) < 0 || Arena.isProtected(level, pos)) {
 			return false;
 		}
 		return !state.liquid();
@@ -83,7 +84,7 @@ public final class Destruction {
 		if (pos.getY() <= this.level.getMinY() + 1) {
 			return true;
 		}
-		if (state.hasBlockEntity() || state.getDestroySpeed(this.level, pos) < 0) {
+		if (state.hasBlockEntity() || state.getDestroySpeed(this.level, pos) < 0 || Arena.isProtected(this.level, pos)) {
 			return true;
 		}
 		return state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(BlockTags.BASE_STONE_NETHER) || state.is(BlockTags.DEEPSLATE_ORE_REPLACEABLES);
