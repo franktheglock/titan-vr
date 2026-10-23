@@ -44,6 +44,24 @@ Vivecraft to start in VR).
 4. Run `op <your name>` in the server console for the admin commands below. Settings live in
    `config/titanvr.json` and can be changed live with `/titan config`.
 
+### Paper servers
+
+There's also a Paper plugin, `titan-vr-paper-x.y.z.jar`, for running a [Paper](https://papermc.io/) 26.2 server
+instead of a Fabric one. It runs the same physics, giants and arena; players still install the Titan VR mod (and
+Vivecraft) on their clients exactly as above.
+
+1. Put `titan-vr-paper-x.y.z.jar` and the
+   [Vivecraft Spigot Extension](https://modrinth.com/plugin/vivecraft-spigot-extension) plugin (it gives the server
+   everyone's headset and hand positions) in the server's `plugins/` folder. Use a Vivecraft Spigot Extension version
+   that matches the players' Vivecraft version.
+2. For an arena world, set `level-type=titanvr\:arena` in `server.properties` before the world is first created (the
+   plugin brings the world type with it). Or build an arena anywhere with `/titan arena build`.
+3. Settings live in `plugins/TitanVR/titanvr.json`; `/titan config` works as usual.
+
+Differences from the Fabric server: arrows and other projectiles fired by giants grow and hit like giant ones, but
+their hitbox for hitting mobs stays normal-sized, and the server doesn't stop giants from being squeezed into a
+crouching pose when wading through tight spots (it doesn't affect their reach or grabbing).
+
 ## Playing as a giant
 
 VR players turn into giants automatically when they join (size 8 by default). Anyone can also use
@@ -159,6 +177,7 @@ gets their inventory, game mode and position back when the game ends. Other comm
 | `/titan ragdoll <targets> [speed]` | (op) Launch entities as ragdolls |
 | `/titan stats` | Body/voxel/ragdoll counts and physics cost |
 | `/titan clear` | (op) Remove all debris |
+| `/titan blast <pos> [radius]` | (op) Blow a ball of blocks apart into debris |
 | `/titan config <key> [value]` | (op) Live tuning; saved to `config/titanvr.json` |
 | `/titan arena build [radius] \| regen \| lobby \| forget` | (op) The minigame arena |
 | `/titan game start <giant> [lives] \| stop` | (op) Start or stop a kill-the-giant game |
@@ -176,6 +195,7 @@ gradlew runAutotest  # scripted smoke test (needs a flat creative world saved as
 gradlew runAutotest -PautotestArena=true  # the same for the arena minigame
 gradlew runServer    # dev dedicated server in run-server/ (accept the EULA in run-server/eula.txt)
 gradlew runJoinServer  # dev client that joins it
+gradlew :paper:build   # -> paper/build/libs/titan-vr-paper-0.2.0.jar (the Paper plugin)
 ```
 
 Requires JDK 25. Vivecraft is pulled from Modrinth's Maven repository.

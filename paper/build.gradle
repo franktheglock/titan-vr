@@ -1,0 +1,56 @@
+plugins {
+	id 'java'
+	id 'io.papermc.paperweight.userdev' version '2.0.0-beta.23'
+}
+
+version = rootProject.mod_version
+group = rootProject.maven_group
+
+base {
+	archivesName = "titan-vr-paper"
+}
+
+repositories {
+	mavenCentral()
+	maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = "Modrinth"
+				url = "https://api.modrinth.com/maven"
+			}
+		}
+		filter {
+			includeGroup "maven.modrinth"
+		}
+	}
+}
+
+dependencies {
+	paperweight.paperDevBundle(rootProject.paper_dev_bundle)
+	// Vivecraft on Paper: the server-side companion plugin's API (VR head/hand poses).
+	compileOnly "maven.modrinth:vivecraft-spigot-extension:${rootProject.vse_version}"
+}
+
+// The shared server code lives in the Fabric mod's source tree; everything Fabric- or client-specific is left out.
+sourceSets.main.java {
+	srcDir '../src/main/java'
+	exclude 'dev/titanvr/client/**', 'dev/titanvr/mixin/**', 'dev/titanvr/fabric/**', 'dev/titanvr/entity/**',
+		'dev/titanvr/compat/**', 'dev/titanvr/AutoTest.java', 'dev/titanvr/ArenaTest.java'
+}
+
+processResources {
+	inputs.property "version", project.version
+	filesMatching("paper-plugin.yml") {
+		expand "version": project.version
+	}
+	// The arena world type, as a datapack the plugin registers at startup
+	from('../src/main/resources/data') {
+		into 'titanvr_datapack/data'
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = 'UTF-8'
+	it.options.release = 25
+}

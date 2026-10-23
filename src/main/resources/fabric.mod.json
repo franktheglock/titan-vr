@@ -9,7 +9,7 @@
   "icon": "assets/titanvr/icon.png",
   "environment": "*",
   "entrypoints": {
-    "main": ["dev.titanvr.TitanMod"],
+    "main": ["dev.titanvr.fabric.FabricMod"],
     "client": ["dev.titanvr.client.TitanClient"]
   },
   "mixins": ["titanvr.mixins.json", "titanvr.vivecraft.mixins.json"],

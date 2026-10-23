@@ -1,7 +1,6 @@
 package dev.titanvr.physics;
 
 import dev.titanvr.TitanConfig;
-import dev.titanvr.entity.PhysicsBodyEntity;
 import dev.titanvr.giant.Giant;
 import dev.titanvr.giant.GiantManager;
 import dev.titanvr.giant.HandState;
@@ -9,7 +8,7 @@ import dev.titanvr.net.TitanNet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import dev.titanvr.platform.Platform;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -60,7 +59,7 @@ public final class Grabbing {
 
 		// Living things (players, mobs), including ones already flopping around as ragdolls.
 		AABB area = new AABB(hp.x - reach, hp.y - reach, hp.z - reach, hp.x + reach, hp.y + reach, hp.z + reach);
-		for (Entity e : this.world.level.getEntities(player, area, e -> !(e instanceof PhysicsBodyEntity) && e.isAlive())) {
+		for (Entity e : this.world.level.getEntities(player, area, e -> this.world.bodyByEntity(e) == null && e.isAlive())) {
 			double d;
 			Ragdoll hr = this.world.ragdolls.get(e.getId());
 			if (hr != null) {
@@ -200,7 +199,7 @@ public final class Grabbing {
 
 	private void sendHold(ServerPlayer player, int entityId, int hand, boolean holding, byte kind, int particle, Vector3d lp, Quaterniond lr) {
 		float[] local = {(float) lp.x, (float) lp.y, (float) lp.z, (float) lr.x, (float) lr.y, (float) lr.z, (float) lr.w};
-		ServerPlayNetworking.send(player, new TitanNet.HoldS2C(entityId, (byte) hand, holding, kind, particle, local));
+		Platform.get().send(player, new TitanNet.HoldS2C(entityId, (byte) hand, holding, kind, particle, local));
 	}
 
 	// ------------------------------------------------------------------ release / throw

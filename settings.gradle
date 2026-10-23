@@ -6,3 +6,6 @@ pluginManagement {
 	}
 }
 rootProject.name = 'titan-vr'
+
+// The Paper plugin: the same server code, wired to Paper instead of Fabric (clients still use the Fabric mod).
+include 'paper'

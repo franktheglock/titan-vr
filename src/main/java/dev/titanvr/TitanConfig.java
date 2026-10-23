@@ -11,14 +11,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import net.fabricmc.loader.api.FabricLoader;
 
 /**
  * Server-side tuning knobs. Persisted as config/titanvr.json and editable live with /titan config.
  */
 public final class TitanConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve("titanvr.json");
+	private static Path path() {
+		return dev.titanvr.platform.Platform.get().configDir().resolve("titanvr.json");
+	}
 
 	public static TitanConfig INSTANCE = new TitanConfig();
 
@@ -101,14 +102,14 @@ public final class TitanConfig {
 	public int maxRagdollSeconds = 15;
 
 	public static void load() {
-		if (Files.exists(PATH)) {
-			try (Reader reader = Files.newBufferedReader(PATH)) {
+		if (Files.exists(path())) {
+			try (Reader reader = Files.newBufferedReader(path())) {
 				TitanConfig loaded = GSON.fromJson(reader, TitanConfig.class);
 				if (loaded != null) {
 					INSTANCE = loaded;
 				}
 			} catch (Exception e) {
-				TitanMod.LOGGER.error("Failed to read {}, using defaults", PATH, e);
+				TitanMod.LOGGER.error("Failed to read {}, using defaults", path(), e);
 			}
 		}
 		save();
@@ -116,12 +117,12 @@ public final class TitanConfig {
 
 	public static void save() {
 		try {
-			Files.createDirectories(PATH.getParent());
-			try (Writer writer = Files.newBufferedWriter(PATH)) {
+			Files.createDirectories(path().getParent());
+			try (Writer writer = Files.newBufferedWriter(path())) {
 				GSON.toJson(INSTANCE, writer);
 			}
 		} catch (IOException e) {
-			TitanMod.LOGGER.error("Failed to write {}", PATH, e);
+			TitanMod.LOGGER.error("Failed to write {}", path(), e);
 		}
 	}
 

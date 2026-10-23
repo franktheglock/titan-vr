@@ -1,6 +1,6 @@
 package dev.titanvr.command;
 
-import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -18,6 +18,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -32,8 +33,8 @@ public final class TitanCommands {
 	private TitanCommands() {
 	}
 
-	public static void register(CommandDispatcher<CommandSourceStack> d) {
-		d.register(Commands.literal("titan")
+	public static LiteralArgumentBuilder<CommandSourceStack> build() {
+		return Commands.literal("titan")
 			.executes(TitanCommands::help)
 			.then(Commands.literal("giant")
 				.executes(c -> toggleSelf(c, Double.NaN))
@@ -158,6 +159,12 @@ public final class TitanCommands {
 						}
 						return 1;
 					})))
+			.then(Commands.literal("blast")
+				.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+				.then(Commands.argument("pos", BlockPosArgument.blockPos())
+					.executes(c -> blast(c, 3))
+					.then(Commands.argument("radius", IntegerArgumentType.integer(1, 6))
+						.executes(c -> blast(c, IntegerArgumentType.getInteger(c, "radius"))))))
 			.then(Commands.literal("tower")
 				.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 				.executes(c -> tower(c)))
@@ -185,7 +192,7 @@ public final class TitanCommands {
 								c.getSource().sendFailure(Component.literal("Could not set " + key + ": " + e.getMessage()));
 							}
 							return 1;
-						})))));
+						}))));
 	}
 
 	private static int help(CommandContext<CommandSourceStack> c) {
@@ -196,12 +203,36 @@ public final class TitanCommands {
 			"/titan tower - build a destructible test tower in front of you",
 			"/titan ragdoll <targets> [speed] - launch entities as ragdolls",
 			"/titan clear | stats | config <key> [value]",
+			"/titan blast <pos> [radius] - blow a ball of blocks apart into debris",
 			"/titan arena build [radius] | regen | lobby | forget - the kill-the-giant arena",
 			"/titan game start <giant> [lives] | stop | join, /titan class <name>",
 			"VR: squeeze grip near anything to grab it (blocks rip out of the world), let go while swinging to throw.",
 			"All other buttons are normal Vivecraft controls.",
 			"Desktop giants: hold R / F to grab with right / left hand, release to throw where you look.")), false);
 		return 1;
+	}
+
+	/** Blows a ball of blocks apart into flying debris. */
+	private static int blast(CommandContext<CommandSourceStack> c, int radius) throws CommandSyntaxException {
+		ServerLevel level = c.getSource().getLevel();
+		BlockPos center = BlockPosArgument.getLoadedBlockPos(c, "pos");
+		PhysicsWorld world = PhysicsWorld.get(level);
+		int n = 0;
+		for (BlockPos pos : BlockPos.betweenClosed(center.offset(-radius, -radius, -radius), center.offset(radius, radius, radius))) {
+			double dx = pos.getX() - center.getX(), dy = pos.getY() - center.getY(), dz = pos.getZ() - center.getZ();
+			double d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+			BlockState state = level.getBlockState(pos);
+			if (d > radius + 0.3 || state.isAir() || state.getDestroySpeed(level, pos) < 0) {
+				continue;
+			}
+			double speed = 14.0 / (1.0 + d);
+			Vector3d vel = d < 0.01 ? new Vector3d(0, speed, 0) : new Vector3d(dx / d * speed, dy / d * speed + 6, dz / d * speed);
+			world.destruction.breakBlock(pos.immutable(), state, vel, true, null);
+			n++;
+		}
+		int count = n;
+		c.getSource().sendSuccess(() -> Component.literal("Blasted " + count + " blocks"), true);
+		return n;
 	}
 
 	private static int buildArena(CommandContext<CommandSourceStack> c, int radius) throws CommandSyntaxException {

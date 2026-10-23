@@ -1,0 +1,12 @@
+name: TitanVR
+version: '${version}'
+main: dev.titanvr.paper.TitanPaperPlugin
+bootstrapper: dev.titanvr.paper.TitanPaperBootstrap
+api-version: '26.2'
+description: Be a VR giant - voxel physics, destruction, grabbing, ragdolls and the kill-the-giant arena. Players need the Titan VR mod.
+dependencies:
+  server:
+    Vivecraft-Spigot-Extension:
+      load: BEFORE
+      required: false
+      join-classpath: true

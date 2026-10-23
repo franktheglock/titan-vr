@@ -2,7 +2,7 @@ package dev.titanvr.giant;
 
 import dev.titanvr.TitanConfig;
 import dev.titanvr.TitanMod;
-import dev.titanvr.compat.VivecraftCompat;
+import dev.titanvr.platform.Platform;
 import dev.titanvr.net.TitanNet;
 import dev.titanvr.physics.PhysicsWorld;
 import java.util.Collection;
@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -152,7 +151,7 @@ public final class GiantManager {
 	}
 
 	/** Respawning creates a new player entity without our modifiers; a giant comes back as a giant at full health. */
-	public static void onRespawn(ServerPlayer oldPlayer, ServerPlayer newPlayer, boolean alive) {
+	public static void onRespawn(ServerPlayer newPlayer) {
 		Giant g = get(newPlayer);
 		if (g == null) {
 			return;
@@ -173,7 +172,7 @@ public final class GiantManager {
 		Giant g = get(player);
 		TitanNet.GiantStateS2C packet = new TitanNet.GiantStateS2C(player.getId(), g != null, g != null ? (float) g.scale : 1.0F);
 		for (ServerPlayer other : player.level().getServer().getPlayerList().getPlayers()) {
-			ServerPlayNetworking.send(other, packet);
+			Platform.get().send(other, packet);
 		}
 	}
 
@@ -182,7 +181,7 @@ public final class GiantManager {
 		for (ServerPlayer other : joiner.level().getServer().getPlayerList().getPlayers()) {
 			Giant g = get(other);
 			if (g != null) {
-				ServerPlayNetworking.send(joiner, new TitanNet.GiantStateS2C(other.getId(), true, (float) g.scale));
+				Platform.get().send(joiner, new TitanNet.GiantStateS2C(other.getId(), true, (float) g.scale));
 			}
 		}
 	}
@@ -202,7 +201,7 @@ public final class GiantManager {
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			Giant g = get(player);
 			if (g == null) {
-				if (autoCheck && TitanConfig.INSTANCE.autoGiantVR && !OPTED_OUT.contains(player.getUUID()) && VivecraftCompat.isVR(player)
+				if (autoCheck && TitanConfig.INSTANCE.autoGiantVR && !OPTED_OUT.contains(player.getUUID()) && Platform.get().vr().isVR(player)
 					&& !dev.titanvr.arena.ArenaGame.isParticipant(player)) {
 					setGiant(player, true, TitanConfig.INSTANCE.defaultGiantScale);
 					player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
@@ -232,9 +231,9 @@ public final class GiantManager {
 		double jump = Math.max(12.0, g.scale * 2.5);
 		boolean teleported = last == null || last.distanceSquared(now) > jump * jump;
 		LAST_PLAYER_POS.put(player.getUUID(), now);
-		g.vr = VivecraftCompat.isVR(player);
+		g.vr = Platform.get().vr().isVR(player);
 		for (int hand = 0; hand < 2; hand++) {
-			boolean tracked = g.vr && VivecraftCompat.handPose(player, hand, pos, rot);
+			boolean tracked = g.vr && Platform.get().vr().handPose(player, hand, pos, rot);
 			if (!tracked) {
 				desktopHand(player, g, hand, pos, rot);
 			}

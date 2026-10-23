@@ -15,8 +15,10 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@v4
-      - run: chmod +x gradlew && ./gradlew build
+      - run: chmod +x gradlew && ./gradlew build :paper:build
       - uses: actions/upload-artifact@v4
         with:
           name: titan-vr
-          path: build/libs/*.jar
+          path: |
+            build/libs/*.jar
+            paper/build/libs/*.jar

@@ -1,9 +1,7 @@
 package dev.titanvr.physics;
 
 import dev.titanvr.TitanConfig;
-import dev.titanvr.compat.VivecraftCompat;
-import dev.titanvr.entity.PhysicsBodyEntity;
-import dev.titanvr.entity.TitanEntities;
+import dev.titanvr.platform.Platform;
 import dev.titanvr.giant.Giant;
 import dev.titanvr.giant.GiantManager;
 import dev.titanvr.giant.HandState;
@@ -22,8 +20,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -54,6 +50,8 @@ public final class PhysicsWorld {
 	public final Destruction destruction;
 	public final Grabbing grabbing;
 	final List<RigidBody> bodies = new ArrayList<>();
+	/** Debris bodies by the id of the entity that carries them. */
+	private final it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap<RigidBody> bodyByEntityId = new it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap<>();
 	final List<RigidBody> pendingAdd = new ArrayList<>();
 	final Int2ObjectOpenHashMap<Ragdoll> ragdolls = new Int2ObjectOpenHashMap<>();
 	final Int2ObjectOpenHashMap<RigidBody> rigidRagdolls = new Int2ObjectOpenHashMap<>();
@@ -166,12 +164,8 @@ public final class PhysicsWorld {
 
 	void addBody(RigidBody body) {
 		if (body.isDebris()) {
-			PhysicsBodyEntity entity = new PhysicsBodyEntity(TitanEntities.PHYSICS_BODY, this.level);
-			entity.body = body;
-			entity.radius = body.shape.radius;
-			entity.setPos(body.pos.x, body.pos.y, body.pos.z);
-			body.entity = entity;
-			this.level.addFreshEntity(entity);
+			body.entity = Platform.get().spawnBodyCarrier(this.level, body);
+			this.bodyByEntityId.put(body.entity.getId(), body);
 			this.voxelCount += body.shape.count();
 		}
 		// Always queued: bodies get created from inside loops over the body list (impacts, launches...).
@@ -191,6 +185,7 @@ public final class PhysicsWorld {
 		}
 		body.removed = true;
 		if (body.entity != null) {
+			this.bodyByEntityId.remove(body.entity.getId());
 			body.entity.discard();
 			this.voxelCount -= body.shape.count();
 		}
@@ -253,7 +248,7 @@ public final class PhysicsWorld {
 	}
 
 	public RigidBody bodyByEntity(Entity entity) {
-		return entity instanceof PhysicsBodyEntity pbe ? pbe.body : null;
+		return this.bodyByEntityId.get(entity.getId());
 	}
 
 	List<RigidBody> bodies() {
@@ -1216,7 +1211,7 @@ public final class PhysicsWorld {
 				r.stillTicks = 0;
 			}
 			boolean dead = !r.entity.isAlive();
-			if (!held && !dead && !dev.titanvr.AutoTest.holdRagdolls && (r.stillTicks > 30 || r.age > cfg.maxRagdollSeconds * 20)) {
+			if (!held && !dead && !dev.titanvr.TitanMod.holdRagdolls && (r.stillTicks > 30 || r.age > cfg.maxRagdollSeconds * 20)) {
 				toEnd.add(entry.getIntKey());
 			}
 		}
@@ -1259,9 +1254,9 @@ public final class PhysicsWorld {
 
 	// ------------------------------------------------------------------ networking
 
-	public void sendShape(PhysicsBodyEntity entity, ServerPlayer player) {
-		RigidBody b = entity.body;
-		if (b == null) {
+	public void sendShape(RigidBody b, ServerPlayer player) {
+		Entity entity = b.entity;
+		if (entity == null) {
 			return;
 		}
 		int n = b.shape.count();
@@ -1274,10 +1269,10 @@ public final class PhysicsWorld {
 			BlockState s = b.shape.states[i];
 			states[i] = s == null ? -1 : net.minecraft.world.level.block.Block.getId(s);
 		}
-		ServerPlayNetworking.send(player, new TitanNet.BodyShapeS2C(entity.getId(), boxes, states));
+		Platform.get().send(player, new TitanNet.BodyShapeS2C(entity.getId(), boxes, states));
 		double[] pos = {b.pos.x, b.pos.y, b.pos.z};
 		float[] rot = {(float) b.rot.x, (float) b.rot.y, (float) b.rot.z, (float) b.rot.w};
-		ServerPlayNetworking.send(player, new TitanNet.BodyStatesS2C(new int[] {entity.getId()}, pos, rot));
+		Platform.get().send(player, new TitanNet.BodyStatesS2C(new int[] {entity.getId()}, pos, rot));
 	}
 
 	private static final class Batch {
@@ -1298,7 +1293,7 @@ public final class PhysicsWorld {
 				continue;
 			}
 			b.stateDirty = false;
-			for (ServerPlayer p : PlayerLookup.tracking(b.entity)) {
+			for (ServerPlayer p : Platform.get().tracking(b.entity)) {
 				Batch batch = batches.computeIfAbsent(p, k -> new Batch());
 				batch.ids.add(b.entity.getId());
 				batch.pos.add(b.pos.x);
@@ -1352,16 +1347,16 @@ public final class PhysicsWorld {
 		for (var entry : batches.entrySet()) {
 			Batch b = entry.getValue();
 			if (!b.ids.isEmpty()) {
-				ServerPlayNetworking.send(entry.getKey(), new TitanNet.BodyStatesS2C(b.ids.toIntArray(), b.pos.toDoubleArray(), b.rot.toFloatArray()));
+				Platform.get().send(entry.getKey(), new TitanNet.BodyStatesS2C(b.ids.toIntArray(), b.pos.toDoubleArray(), b.rot.toFloatArray()));
 			}
 			if (!b.rids.isEmpty()) {
-				ServerPlayNetworking.send(entry.getKey(), new TitanNet.RagdollStatesS2C(b.rkinds.toByteArray(), b.rrigs.toByteArray(), b.rids.toIntArray(), b.rparams.toFloatArray(), b.rvalues.toDoubleArray()));
+				Platform.get().send(entry.getKey(), new TitanNet.RagdollStatesS2C(b.rkinds.toByteArray(), b.rrigs.toByteArray(), b.rids.toIntArray(), b.rparams.toFloatArray(), b.rvalues.toDoubleArray()));
 			}
 		}
 	}
 
 	private List<ServerPlayer> watchers(Entity e) {
-		List<ServerPlayer> list = new ArrayList<>(PlayerLookup.tracking(e));
+		List<ServerPlayer> list = new ArrayList<>(Platform.get().tracking(e));
 		if (e instanceof ServerPlayer sp && !list.contains(sp)) {
 			list.add(sp);
 		}
@@ -1369,6 +1364,6 @@ public final class PhysicsWorld {
 	}
 
 	static void haptic(ServerPlayer player, int hand, float seconds) {
-		VivecraftCompat.haptic(player, hand, seconds);
+		Platform.get().vr().haptic(player, hand, seconds);
 	}
 }

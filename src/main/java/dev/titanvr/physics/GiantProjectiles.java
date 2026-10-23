@@ -55,11 +55,26 @@ public final class GiantProjectiles {
 
 	private static final Map<Projectile, Tracked> TRACKED = new IdentityHashMap<>();
 
+	/** Projectile scales where the Projectile mixin isn't available (the Paper plugin). */
+	private static final Map<Entity, Float> UNMIXED_SCALES = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
 	private GiantProjectiles() {
 	}
 
+	public static void setScale(Entity entity, float scale) {
+		if (entity instanceof Scaled s) {
+			s.titanvr$setScale(scale);
+		} else {
+			UNMIXED_SCALES.put(entity, scale);
+		}
+	}
+
 	public static float scaleOf(Entity entity) {
-		return entity instanceof Scaled s ? s.titanvr$getScale() : 0;
+		if (entity instanceof Scaled s) {
+			return s.titanvr$getScale();
+		}
+		Float f = UNMIXED_SCALES.get(entity);
+		return f != null ? f : 0;
 	}
 
 	/** Server: a projectile entered the world. If a giant fired it, grow it and start tracking it. */
@@ -71,7 +86,7 @@ public final class GiantProjectiles {
 			return;
 		}
 		float scale = (float) g.scale;
-		((Scaled) p).titanvr$setScale(scale);
+		setScale(p, scale);
 		p.refreshDimensions();
 		// Bigger, so a bit faster: keeps the arc looking like a throw at the giant's own size.
 		p.setDeltaMovement(p.getDeltaMovement().scale(Math.min(2.0, 1.0 + 0.075 * scale)));
@@ -104,7 +119,7 @@ public final class GiantProjectiles {
 			if (impact) {
 				double energy = 0.5 * t.mass * lastSpeed * lastSpeed;
 				Vec3 at = p.isRemoved() ? t.lastPos.add(t.lastVel.scale(0.05)) : pos;
-				if (dev.titanvr.AutoTest.ENABLED) {
+				if (dev.titanvr.TitanMod.DEV_TEST) {
 					dev.titanvr.TitanMod.LOGGER.info("[autotest] giant projectile impact at {} speed={} energy={} hits={}", at, lastSpeed, energy, t.hit.size());
 				}
 				if (energy > 400) {

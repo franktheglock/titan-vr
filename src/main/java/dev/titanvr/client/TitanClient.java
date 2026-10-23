@@ -14,6 +14,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -22,6 +23,11 @@ public class TitanClient implements ClientModInitializer {
 	/** Shapes that arrived before their entity did. */
 	private static final Int2ObjectOpenHashMap<ClientShape> PENDING_SHAPES = new Int2ObjectOpenHashMap<>();
 	private static final Int2ObjectOpenHashMap<double[]> PENDING_STATES = new Int2ObjectOpenHashMap<>();
+	/**
+	 * Paper servers can't add our entity type, so debris arrives as an (invisible) vanilla block display; once its
+	 * shape arrives we swap it for a client-side {@link PhysicsBodyEntity} with the same id.
+	 */
+	private static final it.unimi.dsi.fastutil.ints.IntOpenHashSet TO_ADOPT = new it.unimi.dsi.fastutil.ints.IntOpenHashSet();
 
 	@Override
 	public void onInitializeClient() {
@@ -38,6 +44,10 @@ public class TitanClient implements ClientModInitializer {
 
 		ClientEntityEvents.ENTITY_LOAD.register((entity, level) -> {
 			GiantProjectileRender.onLoad(entity);
+			if (entity instanceof Display.BlockDisplay && PENDING_SHAPES.containsKey(entity.getId())) {
+				// Can't swap entities while the level is adding one; do it at the end of the tick
+				TO_ADOPT.add(entity.getId());
+			}
 			if (entity instanceof PhysicsBodyEntity pbe) {
 				ClientShape shape = PENDING_SHAPES.remove(entity.getId());
 				if (shape != null) {
@@ -51,15 +61,23 @@ public class TitanClient implements ClientModInitializer {
 		});
 		ClientTickEvents.START_CLIENT_TICK.register(GiantClient::startTick);
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+			if (!TO_ADOPT.isEmpty() && mc.level != null) {
+				for (int id : TO_ADOPT.toIntArray()) {
+					adopt(mc, id);
+				}
+				TO_ADOPT.clear();
+			}
 			ClientRagdolls.tick();
 			GiantClient.endTick(mc);
 			ClientAutoTest.tick(mc);
 			if (mc.level == null) {
+				TO_ADOPT.clear();
 				PENDING_SHAPES.clear();
 				PENDING_STATES.clear();
 			}
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			TO_ADOPT.clear();
 			GiantClient.clear();
 			ClientRagdolls.clear();
 			PENDING_SHAPES.clear();
@@ -79,7 +97,23 @@ public class TitanClient implements ClientModInitializer {
 			applyShape(pbe, shape);
 		} else {
 			PENDING_SHAPES.put(p.entityId(), shape);
+			if (e instanceof Display.BlockDisplay) {
+				adopt(mc, p.entityId());
+			}
 		}
+	}
+
+	/** Replaces a carrier block display with our own body entity (same id); its pending shape and state then apply. */
+	private static void adopt(Minecraft mc, int id) {
+		Entity carrier = mc.level.getEntity(id);
+		if (!(carrier instanceof Display.BlockDisplay)) {
+			return;
+		}
+		PhysicsBodyEntity pbe = new PhysicsBodyEntity(TitanEntities.PHYSICS_BODY, mc.level);
+		pbe.setId(id);
+		pbe.setPos(carrier.getX(), carrier.getY(), carrier.getZ());
+		mc.level.removeEntity(id, Entity.RemovalReason.DISCARDED);
+		mc.level.addEntity(pbe);
 	}
 
 	private static void applyShape(PhysicsBodyEntity entity, ClientShape shape) {

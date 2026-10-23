@@ -292,7 +292,7 @@ public final class Destruction {
 				b.wake();
 				b.vel.add(away.div(d).mul(Math.min(30.0, root * f / (8.0 * Math.sqrt(b.mass())))));
 			}
-			if (dev.titanvr.AutoTest.ENABLED) {
+			if (dev.titanvr.TitanMod.DEV_TEST) {
 				dev.titanvr.TitanMod.LOGGER.info("[autotest] shockwave energy={} radius={} blocks broken={}", (int) e, String.format("%.1f", radius), broken);
 			}
 			float volume = (float) Math.min(6.0, 0.5 + e / 20000.0);

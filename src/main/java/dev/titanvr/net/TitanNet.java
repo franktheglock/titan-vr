@@ -2,7 +2,6 @@ package dev.titanvr.net;
 
 import dev.titanvr.TitanMod;
 import dev.titanvr.physics.Rig;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -275,13 +274,4 @@ public final class TitanNet {
 		}
 	}
 
-	public static void registerPayloads() {
-		PayloadTypeRegistry.serverboundPlay().register(GrabC2S.TYPE, GrabC2S.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(ResizeC2S.TYPE, ResizeC2S.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(GiantStateS2C.TYPE, GiantStateS2C.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(BodyShapeS2C.TYPE, BodyShapeS2C.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(BodyStatesS2C.TYPE, BodyStatesS2C.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(RagdollStatesS2C.TYPE, RagdollStatesS2C.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(HoldS2C.TYPE, HoldS2C.CODEC);
-	}
 }

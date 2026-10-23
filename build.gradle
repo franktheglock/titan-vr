@@ -28,6 +28,8 @@ loom {
 			client()
 			name "Join Dev Server"
 			programArgs "--quickPlayMultiplayer", "localhost:25565"
+			vmArg "-Dtitanvr.shotEvery=" + (project.findProperty("shotEvery") ?: "0")
+			vmArg "-Dtitanvr.grabAt=" + (project.findProperty("grabAt") ?: "0")
 		}
 	}
 	mods {

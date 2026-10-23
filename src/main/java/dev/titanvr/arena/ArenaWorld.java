@@ -2,7 +2,7 @@ package dev.titanvr.arena;
 
 import dev.titanvr.TitanConfig;
 import dev.titanvr.TitanMod;
-import dev.titanvr.compat.VivecraftCompat;
+import dev.titanvr.platform.Platform;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -18,7 +18,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.FlatLevelSource;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.Vec3;
@@ -51,17 +50,13 @@ public final class ArenaWorld {
 		long start = System.currentTimeMillis();
 		Arena arena = Arena.create(server, level, new BlockPos(0, 64, 0), TitanConfig.INSTANCE.arenaRadius, true);
 		arena.buildNow(level);
-		GameRules rules = level.getGameRules();
-		rules.set(GameRules.ADVANCE_TIME, false, server);
-		rules.set(GameRules.ADVANCE_WEATHER, false, server);
-		rules.set(GameRules.SPAWN_MOBS, false, server);
-		rules.set(GameRules.SPAWN_MONSTERS, false, server);
-		rules.set(GameRules.SPAWN_PHANTOMS, false, server);
-		rules.set(GameRules.SPAWN_PATROLS, false, server);
-		rules.set(GameRules.SPAWN_WANDERING_TRADERS, false, server);
-		rules.set(GameRules.IMMEDIATE_RESPAWN, true, server);
-		rules.set(GameRules.RESPAWN_RADIUS, 0, server);
-		server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(), "time set noon");
+		// Commands rather than the GameRules API, which differs between Fabric (server-wide) and Paper (per world)
+		var source = server.createCommandSourceStack().withLevel(level).withSuppressedOutput();
+		for (String command : new String[] {"gamerule advance_time false", "gamerule advance_weather false", "gamerule spawn_mobs false",
+			"gamerule spawn_monsters false", "gamerule spawn_phantoms false", "gamerule spawn_patrols false",
+			"gamerule spawn_wandering_traders false", "gamerule immediate_respawn true", "gamerule respawn_radius 0", "time set noon"}) {
+			server.getCommands().performPrefixedCommand(source, command);
+		}
 		Vec3 lobby = arena.lobbySpawn(0);
 		level.setRespawnData(LevelData.RespawnData.of(level.dimension(), BlockPos.containing(lobby), 0, 0));
 		TitanMod.LOGGER.info("Built the arena world's arena in {} ms", System.currentTimeMillis() - start);
@@ -114,7 +109,7 @@ public final class ArenaWorld {
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
 			if (p.level() == level) {
 				players.add(p);
-				if (VivecraftCompat.isVR(p)) {
+				if (Platform.get().vr().isVR(p)) {
 					vr.add(p);
 				}
 			}

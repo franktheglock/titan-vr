@@ -30,7 +30,7 @@ public final class AutoTest {
 	public static volatile int tick = -1;
 	public static volatile boolean done;
 	/** Keeps ragdolls down while the test photographs them. */
-	public static volatile boolean holdRagdolls;
+	// (holdRagdolls lives in TitanMod so the shared physics code can read it)
 
 	private static BlockPos ground;
 	private static LivingEntity heldZombie;
@@ -66,6 +66,8 @@ public final class AutoTest {
 		try {
 			if (t == 1) {
 				p.setGameMode(GameType.CREATIVE);
+				// The player may have logged out far away (e.g. after the arena test): load the scene's chunk first
+				level.getChunk(0, 0);
 				ground = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(0, 0, 0));
 				GiantManager.setGiant(p, true, 6.0);
 				look(p, 0.5, ground.getY() + 1, -2.5, 0, 5);
@@ -346,7 +348,7 @@ public final class AutoTest {
 			}
 			// Close-ups of each mob lying where it landed (ragdolls are held down meanwhile).
 			if (t == 705) {
-				holdRagdolls = true;
+				TitanMod.holdRagdolls = true;
 			}
 			if (t >= 712 && (t - 712) % 4 == 0 && (t - 712) / 4 < ZOO.size()) {
 				LivingEntity e = ZOO.get((t - 712) / 4);
@@ -357,7 +359,7 @@ public final class AutoTest {
 				}
 			}
 			if (t == 780) {
-				holdRagdolls = false;
+				TitanMod.holdRagdolls = false;
 			}
 			// --- Phase K: giant again, slamming a diamond pickaxe into the ground.
 			if (t == 790) {

@@ -1,6 +1,5 @@
 package dev.titanvr.physics;
 
-import dev.titanvr.entity.PhysicsBodyEntity;
 import java.util.UUID;
 import net.minecraft.world.entity.LivingEntity;
 import org.joml.Matrix3d;
@@ -37,7 +36,8 @@ public final class RigidBody {
 	int shockCooldown;
 
 	/** Visual entity for debris bodies (null for mob proxies). */
-	public PhysicsBodyEntity entity;
+	/** The entity that carries this body to clients (debris only). */
+	public net.minecraft.world.entity.Entity entity;
 	/** Mob this body stands in for while it is rigidly ragdolled. */
 	public LivingEntity proxy;
 	/** Whether the proxy mob already had NoAI before being ragdolled. */
