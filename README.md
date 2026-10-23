@@ -189,13 +189,13 @@ Useful config keys: `defaultGiantScale`, `throwMultiplier`, `destructionMultipli
 ## Building
 
 ```
-gradlew build      # -> build/libs/titan-vr-0.3.1.jar
+gradlew build      # -> build/libs/titan-vr-0.3.2.jar
 gradlew runClient  # dev client (Vivecraft is on the dev classpath)
 gradlew runAutotest  # scripted smoke test (needs a flat creative world saved as run/saves/TitanTest)
 gradlew runAutotest -PautotestArena=true  # the same for the arena minigame
 gradlew runServer    # dev dedicated server in run-server/ (accept the EULA in run-server/eula.txt)
 gradlew runJoinServer  # dev client that joins it
-gradlew :paper:build   # -> paper/build/libs/titan-vr-paper-0.3.1.jar (the Paper plugin)
+gradlew :paper:build   # -> paper/build/libs/titan-vr-paper-0.3.2.jar (the Paper plugin)
 ```
 
 Requires JDK 25. Vivecraft is pulled from Modrinth's Maven repository.
