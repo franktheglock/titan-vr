@@ -170,7 +170,7 @@ Useful config keys: `defaultGiantScale`, `throwMultiplier`, `destructionMultipli
 ## Building
 
 ```
-gradlew build      # -> build/libs/titan-vr-0.1.0.jar
+gradlew build      # -> build/libs/titan-vr-0.2.0.jar
 gradlew runClient  # dev client (Vivecraft is on the dev classpath)
 gradlew runAutotest  # scripted smoke test (needs a flat creative world saved as run/saves/TitanTest)
 gradlew runAutotest -PautotestArena=true  # the same for the arena minigame
