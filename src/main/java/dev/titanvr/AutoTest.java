@@ -22,6 +22,8 @@ import org.joml.Vector3d;
  */
 public final class AutoTest {
 	public static final boolean ENABLED = Boolean.getBoolean("titanvr.autotest");
+	/** Run the arena minigame scenario instead of the physics one. */
+	public static final boolean ARENA = Boolean.getBoolean("titanvr.autotest.arena");
 	/** Skip ahead to a later phase (scene setup still runs). */
 	private static final int START_AT = Integer.getInteger("titanvr.autotest.start", 0);
 	/** Ticks since the scenario started (read by the client half to time screenshots). */
@@ -52,6 +54,15 @@ public final class AutoTest {
 		PhysicsWorld world = PhysicsWorld.get(level);
 		Giant g = GiantManager.get(p);
 		int t = tick;
+		if (ARENA) {
+			try {
+				ArenaTest.tick(p, t);
+			} catch (Throwable e) {
+				TitanMod.LOGGER.error("[autotest] failed at t={}", t, e);
+				done = true;
+			}
+			return;
+		}
 		try {
 			if (t == 1) {
 				p.setGameMode(GameType.CREATIVE);
@@ -364,6 +375,10 @@ public final class AutoTest {
 			}
 			if (t == 830) {
 				TitanMod.LOGGER.info("[autotest] pickaxe slam: bodies={} voxels={}", world.bodyCount(), world.voxelCount());
+				TitanMod.LOGGER.info("[autotest] giant health at size 8: {}/{}", p.getHealth(), p.getMaxHealth());
+				GiantManager.resize(p, 4.0);
+				TitanMod.LOGGER.info("[autotest] giant health at size 4: {}/{}", p.getHealth(), p.getMaxHealth());
+				GiantManager.resize(p, 8.0);
 				try {
 					java.lang.reflect.Method fly = net.minecraft.world.entity.player.Player.class.getDeclaredMethod("getFlyingSpeed");
 					fly.setAccessible(true);

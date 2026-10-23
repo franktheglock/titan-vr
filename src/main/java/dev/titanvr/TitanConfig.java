@@ -81,6 +81,23 @@ public final class TitanConfig {
 	/** Heavy impacts above this kinetic energy (tonne * (blocks/s)^2 / 2) send out a shockwave. */
 	public double shockwaveMinEnergy = 3000.0;
 	public boolean giantsImmuneToPhysicsDamage = true;
+	/** Extra max health (half-hearts) per size step above 1: a size-8 giant has 20 + 7 * this. */
+	public double giantHealthPerScale = 20.0;
+
+	// --- arena minigame ---
+	public int arenaRadius = 40;
+	/** Lives shared by the whole hunter team. */
+	public int arenaLives = 25;
+	public double arenaGiantScale = 8.0;
+	/** How high above the arena floor the giant's feet may go (the hunters' lobby is at 50). */
+	public int arenaGiantCeiling = 18;
+	public int arenaCountdownSeconds = 15;
+	public int arenaTimeLimitSeconds = 600;
+	/** The arena rebuilds itself this often during a game (0 = only between games). */
+	public int arenaRegenSeconds = 150;
+	public int arenaResupplySeconds = 30;
+	/** In a "Titan VR Arena" world, start games by themselves when a VR player and a hunter are around. */
+	public boolean arenaAutoStart = true;
 	public int maxRagdollSeconds = 15;
 
 	public static void load() {

@@ -26,6 +26,21 @@ public final class ClientAutoTest {
 			return;
 		}
 		int t = AutoTest.tick;
+		if (AutoTest.ARENA) {
+			String name = dev.titanvr.ArenaTest.shot;
+			if (name != null) {
+				dev.titanvr.ArenaTest.shot = null;
+				mc.options.setCameraType(CameraType.FIRST_PERSON);
+				Screenshot.grab(mc.gameDirectory, name + ".png", mc.gameRenderer.mainRenderTarget(), 1, msg -> TitanMod.LOGGER.info("[autotest] screenshot {}", name));
+			}
+			if (mc.player.isDeadOrDying() && mc.player.deathTime == 15) {
+				mc.player.respawn();
+			}
+			if (AutoTest.done && ++doneTicks == 40) {
+				mc.stop();
+			}
+			return;
+		}
 		if (t == 300) {
 			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
 		}

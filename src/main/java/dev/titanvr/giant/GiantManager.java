@@ -95,6 +95,7 @@ public final class GiantManager {
 		setModifier(player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE), (g.scale - 1.0) * 0.6);
 		setModifier(player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE), (g.scale - 1.0) * 0.6);
 		setModifier(player.getAttribute(Attributes.FALL_DAMAGE_MULTIPLIER), -1.0);
+		setMaxHealth(player, (g.scale - 1.0) * TitanConfig.INSTANCE.giantHealthPerScale);
 		// A giant's hitbox is enormous; it must not count as "in the way" when placing blocks.
 		player.blocksBuilding = false;
 		player.getAbilities().mayfly = true;
@@ -114,6 +115,7 @@ public final class GiantManager {
 		removeModifier(player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE));
 		removeModifier(player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE));
 		removeModifier(player.getAttribute(Attributes.FALL_DAMAGE_MULTIPLIER));
+		setMaxHealth(player, 0.0);
 		player.blocksBuilding = true;
 		GameType mode = player.gameMode();
 		boolean canFly = mode == GameType.CREATIVE || mode == GameType.SPECTATOR;
@@ -130,6 +132,35 @@ public final class GiantManager {
 		if (attr != null) {
 			attr.addOrUpdateTransientModifier(new AttributeModifier(MODIFIER, amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
 		}
+	}
+
+	/** Adds {@code bonus} to max health, keeping the player at the same fraction of their health bar. */
+	private static void setMaxHealth(ServerPlayer player, double bonus) {
+		AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);
+		if (attr == null) {
+			return;
+		}
+		float fraction = player.getHealth() / player.getMaxHealth();
+		if (bonus > 0) {
+			attr.addOrUpdateTransientModifier(new AttributeModifier(MODIFIER, bonus, AttributeModifier.Operation.ADD_VALUE));
+		} else {
+			attr.removeModifier(MODIFIER);
+		}
+		if (player.isAlive()) {
+			player.setHealth(Math.max(1.0F, fraction * player.getMaxHealth()));
+		}
+	}
+
+	/** Respawning creates a new player entity without our modifiers; a giant comes back as a giant at full health. */
+	public static void onRespawn(ServerPlayer oldPlayer, ServerPlayer newPlayer, boolean alive) {
+		Giant g = get(newPlayer);
+		if (g == null) {
+			return;
+		}
+		apply(newPlayer, g);
+		newPlayer.setHealth(newPlayer.getMaxHealth());
+		LAST_PLAYER_POS.remove(newPlayer.getUUID());
+		broadcast(newPlayer);
 	}
 
 	private static void removeModifier(AttributeInstance attr) {
@@ -171,7 +202,8 @@ public final class GiantManager {
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			Giant g = get(player);
 			if (g == null) {
-				if (autoCheck && TitanConfig.INSTANCE.autoGiantVR && !OPTED_OUT.contains(player.getUUID()) && VivecraftCompat.isVR(player)) {
+				if (autoCheck && TitanConfig.INSTANCE.autoGiantVR && !OPTED_OUT.contains(player.getUUID()) && VivecraftCompat.isVR(player)
+					&& !dev.titanvr.arena.ArenaGame.isParticipant(player)) {
 					setGiant(player, true, TitanConfig.INSTANCE.defaultGiantScale);
 					player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
 						"§6[Titan VR]§r You are a giant! Squeeze grip to grab, swing and let go to throw. /titan size <n> to resize."));

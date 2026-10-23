@@ -2,10 +2,14 @@ package dev.titanvr.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.titanvr.TitanConfig;
+import dev.titanvr.arena.Arena;
+import dev.titanvr.arena.ArenaGame;
+import dev.titanvr.arena.HunterClass;
 import dev.titanvr.giant.Giant;
 import dev.titanvr.giant.GiantManager;
 import dev.titanvr.physics.PhysicsWorld;
@@ -76,6 +80,84 @@ public final class TitanCommands {
 					.executes(c -> ragdoll(c, 6))
 					.then(Commands.argument("speed", DoubleArgumentType.doubleArg(0, 200))
 						.executes(c -> ragdoll(c, DoubleArgumentType.getDouble(c, "speed"))))))
+			.then(Commands.literal("arena")
+				.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+				.then(Commands.literal("build")
+					.executes(c -> buildArena(c, TitanConfig.INSTANCE.arenaRadius))
+					.then(Commands.argument("radius", IntegerArgumentType.integer(20, 80))
+						.executes(c -> buildArena(c, IntegerArgumentType.getInteger(c, "radius")))))
+				.then(Commands.literal("regen").executes(c -> {
+					Arena a = Arena.get();
+					if (a == null) {
+						c.getSource().sendFailure(Component.literal("There's no arena yet: /titan arena build"));
+						return 0;
+					}
+					a.regenerate();
+					c.getSource().sendSuccess(() -> Component.literal("Rebuilding the arena"), true);
+					return 1;
+				}))
+				.then(Commands.literal("lobby").executes(c -> {
+					Arena a = Arena.get();
+					if (a == null) {
+						c.getSource().sendFailure(Component.literal("There's no arena yet: /titan arena build"));
+						return 0;
+					}
+					ServerPlayer p = c.getSource().getPlayerOrException();
+					var s = a.lobbySpawn(0);
+					p.teleportTo(a.level(c.getSource().getServer()), s.x, s.y, s.z, java.util.Set.of(), p.getYRot(), p.getXRot(), false);
+					return 1;
+				}))
+				.then(Commands.literal("forget").executes(c -> {
+					if (ArenaGame.get() != null) {
+						c.getSource().sendFailure(Component.literal("Stop the game first"));
+						return 0;
+					}
+					Arena.remove(c.getSource().getServer());
+					c.getSource().sendSuccess(() -> Component.literal("Arena forgotten (its blocks stay where they are)"), true);
+					return 1;
+				})))
+			.then(Commands.literal("game")
+				.then(Commands.literal("start")
+					.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+					.then(Commands.argument("giant", EntityArgument.player())
+						.executes(c -> startGame(c, TitanConfig.INSTANCE.arenaLives))
+						.then(Commands.argument("lives", IntegerArgumentType.integer(1, 500))
+							.executes(c -> startGame(c, IntegerArgumentType.getInteger(c, "lives"))))))
+				.then(Commands.literal("stop")
+					.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+					.executes(c -> {
+						if (ArenaGame.get() == null) {
+							c.getSource().sendFailure(Component.literal("No game is running"));
+							return 0;
+						}
+						ArenaGame.stop();
+						c.getSource().sendSuccess(() -> Component.literal("Game stopped; everyone got their things back"), true);
+						return 1;
+					}))
+				.then(Commands.literal("join").executes(c -> {
+					String err = ArenaGame.join(c.getSource().getPlayerOrException());
+					if (err != null) {
+						c.getSource().sendFailure(Component.literal(err));
+						return 0;
+					}
+					return 1;
+				})))
+			.then(Commands.literal("class")
+				.then(Commands.argument("class", StringArgumentType.word())
+					.suggests((c, b) -> SharedSuggestionProvider.suggest(java.util.Arrays.stream(HunterClass.values()).map(HunterClass::id), b))
+					.executes(c -> {
+						HunterClass cls = HunterClass.byId(StringArgumentType.getString(c, "class"));
+						if (cls == null) {
+							c.getSource().sendFailure(Component.literal("Unknown class"));
+							return 0;
+						}
+						String err = ArenaGame.chooseClass(c.getSource().getPlayerOrException(), cls);
+						if (err != null) {
+							c.getSource().sendFailure(Component.literal(err));
+							return 0;
+						}
+						return 1;
+					})))
 			.then(Commands.literal("tower")
 				.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 				.executes(c -> tower(c)))
@@ -114,9 +196,35 @@ public final class TitanCommands {
 			"/titan tower - build a destructible test tower in front of you",
 			"/titan ragdoll <targets> [speed] - launch entities as ragdolls",
 			"/titan clear | stats | config <key> [value]",
+			"/titan arena build [radius] | regen | lobby | forget - the kill-the-giant arena",
+			"/titan game start <giant> [lives] | stop | join, /titan class <name>",
 			"VR: squeeze grip near anything to grab it (blocks rip out of the world), let go while swinging to throw.",
 			"All other buttons are normal Vivecraft controls.",
 			"Desktop giants: hold R / F to grab with right / left hand, release to throw where you look.")), false);
+		return 1;
+	}
+
+	private static int buildArena(CommandContext<CommandSourceStack> c, int radius) throws CommandSyntaxException {
+		if (ArenaGame.get() != null) {
+			c.getSource().sendFailure(Component.literal("Stop the game first"));
+			return 0;
+		}
+		ServerPlayer p = c.getSource().getPlayerOrException();
+		Arena.create(c.getSource().getServer(), p.level(), p.blockPosition(), radius, false);
+		c.getSource().sendSuccess(() -> Component.literal("Building a " + (radius * 2) + "-block arena around you (it replaces the terrain). "
+			+ "Start a game with /titan game start <giant>"), true);
+		return 1;
+	}
+
+	private static int startGame(CommandContext<CommandSourceStack> c, int lives) throws CommandSyntaxException {
+		ServerPlayer giant = EntityArgument.getPlayer(c, "giant");
+		java.util.List<ServerPlayer> hunters = new java.util.ArrayList<>(c.getSource().getServer().getPlayerList().getPlayers());
+		hunters.remove(giant);
+		String err = ArenaGame.start(c.getSource().getServer(), giant, hunters, lives);
+		if (err != null) {
+			c.getSource().sendFailure(Component.literal(err));
+			return 0;
+		}
 		return 1;
 	}
 
@@ -127,6 +235,10 @@ public final class TitanCommands {
 
 	private static int setSelf(CommandContext<CommandSourceStack> c, boolean on, double scale) throws CommandSyntaxException {
 		ServerPlayer p = c.getSource().getPlayerOrException();
+		if (ArenaGame.isParticipant(p)) {
+			c.getSource().sendFailure(Component.literal("Not during a game"));
+			return 0;
+		}
 		GiantManager.setGiant(p, on, scale);
 		c.getSource().sendSuccess(() -> Component.literal(on ? "You are now a giant (size " + String.format("%.1f", GiantManager.get(p).scale) + ")" : "You are normal-sized again"), false);
 		return 1;

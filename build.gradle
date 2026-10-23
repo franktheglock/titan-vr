@@ -17,6 +17,7 @@ loom {
 			name "Titan Autotest"
 			vmArg "-Dtitanvr.autotest=true"
 			vmArg "-Dtitanvr.autotest.start=" + (project.findProperty("autotestStart") ?: "0")
+			vmArg "-Dtitanvr.autotest.arena=" + (project.findProperty("autotestArena") ?: "false")
 			programArgs "--quickPlaySingleplayer", "TitanTest"
 		}
 		server {

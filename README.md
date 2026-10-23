@@ -49,6 +49,9 @@ Vivecraft to start in VR).
 VR players turn into giants automatically when they join (size 8 by default). Anyone can also use
 `/titan giant on [scale]`.
 
+Giants are tougher the bigger they are: every size step adds 10 hearts (a size-8 giant has 80), and they take no fall
+or debris damage.
+
 Like Voxel Destruct 2, a giant has **no body**: everyone else sees a huge floating head (their skin) and two
 huge arms. The head and hands follow the giant's headset and controllers **live**: Vivecraft streams VR poses to
 every client and Titan VR draws them interpolated each frame, so desktop players see every head turn and hand
@@ -92,6 +95,41 @@ they still have the momentum, and land with a shockwave.
 **Getting flung on desktop**: when you're ragdolled, your first-person camera rides in your ragdoll's head and
 tumbles with it. When you land, you face the way you ended up.
 
+## Minigame: kill the giant
+
+A ready-made arena where one VR giant takes on everyone else. The hunters share a pool of lives (25 by default)
+and win by killing the giant; the giant wins by using them all up or by surviving the time limit (10 minutes).
+
+**The easy way: an arena world.** In *Create World* → *More* → *World Type*, pick **Titan VR Arena** (on a server,
+set `level-type=titanvr\:arena` in `server.properties` before the world is first created). You get an empty sky
+world with the arena already built, endless daytime, no mobs or weather, and everyone spawning in the lobby.
+Games start by themselves 30 seconds after there's a VR player (the giant) and at least one other player, and the
+next one starts after each game ends. With several VR players, they take turns being the giant. Players who join
+mid-game become hunters. Turn auto-start off with `/titan config arenaAutoStart false`.
+
+**Or in any world:**
+
+1. Stand where you want the arena and run `/titan arena build [radius]` (default radius 40). It replaces the
+   terrain with a walled field of towers, houses, trees and boulders, plus a glass lobby high above the middle.
+2. Run `/titan game start <giant> [lives]`. Everyone else online becomes a hunter and is sent to the lobby.
+3. Hunters click a class in chat (or `/titan class <name>`), then walk off the edge of the lobby to drop in. The
+   landing is safe. When you die you're back in the lobby with your class kit, and you can switch class there.
+   Dying when the team is out of lives puts you out as a spectator.
+
+| Class | Kit | Trade-off |
+| --- | --- | --- |
+| Archer | Power IV bow, endless arrows, Speed | Leather armour |
+| Aviator | Elytra, 16 rockets, Multishot crossbow | No chestplate, little ammo |
+| Smasher | Mace (Density, Wind Burst), wind charges, iron armour | Slowness |
+| Bomber | 6 splash potions of Harming II, TNT, chainmail | Few shots between resupplies |
+| Scout | Sharpness sword, ender pearls, Speed II, Jump Boost II | No armour |
+
+Ammo is topped up every 30 seconds. The giant has a health bar everyone can see, can't leave the arena or reach the
+lobby, and doesn't heal by eating. The arena rebuilds itself every 2.5 minutes (and after each game), and everyone
+gets their inventory, game mode and position back when the game ends. Other commands: `/titan game stop`,
+`/titan game join` (join a running game), `/titan arena regen | lobby | forget`. Settings start with `arena`
+(`/titan config arenaLives 30`, `arenaTimeLimitSeconds`, `arenaRegenSeconds`, `arenaGiantScale`, ...).
+
 ## The physics
 
 - Compound voxel **rigid bodies** with proper mass/inertia tensors, sequential-impulse contact solving with
@@ -122,9 +160,12 @@ tumbles with it. When you land, you face the way you ended up.
 | `/titan stats` | Body/voxel/ragdoll counts and physics cost |
 | `/titan clear` | (op) Remove all debris |
 | `/titan config <key> [value]` | (op) Live tuning; saved to `config/titanvr.json` |
+| `/titan arena build [radius] \| regen \| lobby \| forget` | (op) The minigame arena |
+| `/titan game start <giant> [lives] \| stop` | (op) Start or stop a kill-the-giant game |
+| `/titan game join`, `/titan class <name>` | Join a running game; pick a class in the lobby |
 
 Useful config keys: `defaultGiantScale`, `throwMultiplier`, `destructionMultiplier`, `handSmashSpeed`,
-`structuralCollapse`, `rubbleMode`, `maxVoxels`, `impactDamageMultiplier`, `autoGiantVR`.
+`structuralCollapse`, `rubbleMode`, `maxVoxels`, `impactDamageMultiplier`, `giantHealthPerScale`, `autoGiantVR`.
 
 ## Building
 
@@ -132,6 +173,7 @@ Useful config keys: `defaultGiantScale`, `throwMultiplier`, `destructionMultipli
 gradlew build      # -> build/libs/titan-vr-0.1.0.jar
 gradlew runClient  # dev client (Vivecraft is on the dev classpath)
 gradlew runAutotest  # scripted smoke test (needs a flat creative world saved as run/saves/TitanTest)
+gradlew runAutotest -PautotestArena=true  # the same for the arena minigame
 gradlew runServer    # dev dedicated server in run-server/ (accept the EULA in run-server/eula.txt)
 gradlew runJoinServer  # dev client that joins it
 ```

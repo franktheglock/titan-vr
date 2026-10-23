@@ -8,9 +8,13 @@ import dev.titanvr.giant.GiantManager;
 import dev.titanvr.net.TitanNet;
 import dev.titanvr.physics.GiantProjectiles;
 import dev.titanvr.physics.PhysicsWorld;
+import dev.titanvr.arena.Arena;
+import dev.titanvr.arena.ArenaGame;
+import dev.titanvr.arena.ArenaWorld;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
@@ -52,8 +56,24 @@ public class TitanMod implements ModInitializer {
 		ServerLevelEvents.UNLOAD.register((server, level) -> PhysicsWorld.unload(level));
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> PhysicsWorld.clearAll());
 
-		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> GiantManager.syncTo(handler.player));
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			GiantManager.syncTo(handler.player);
+			ArenaWorld.onJoin(handler.player);
+		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> GiantManager.onDisconnect(handler.player));
+		ServerPlayerEvents.AFTER_RESPAWN.register(GiantManager::onRespawn);
+		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> ArenaGame.onRespawn(newPlayer));
+		ServerPlayerEvents.ALLOW_DEATH.register((player, source, amount) -> {
+			ArenaGame.onDeath(player, source);
+			return true;
+		});
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> ArenaGame.onDisconnect(handler.player));
+		ServerTickEvents.END_SERVER_TICK.register(ArenaGame::tickServer);
+		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+			Arena.load(server);
+			ArenaWorld.onServerStarted(server);
+		});
+		ServerLifecycleEvents.SERVER_STOPPING.register(server -> ArenaGame.stop());
 
 		EntityTrackingEvents.START_TRACKING.register((entity, player) -> {
 			if (entity instanceof PhysicsBodyEntity pbe && pbe.body != null) {
@@ -65,6 +85,9 @@ public class TitanMod implements ModInitializer {
 		});
 
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> {
+			if (!ArenaGame.allowDamage(entity, source)) {
+				return false;
+			}
 			boolean ragdolled = PhysicsWorld.RAGDOLLED.contains(entity.getId());
 			if (ragdolled && (source.is(DamageTypes.IN_WALL) || source.is(DamageTypeTags.IS_FALL))) {
 				return false;
