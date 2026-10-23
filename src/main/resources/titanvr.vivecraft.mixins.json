@@ -1,0 +1,12 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.titanvr.mixin.vivecraft",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "MCVRMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

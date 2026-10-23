@@ -1,0 +1,143 @@
+# Titan VR
+
+A Minecraft **26.2** Fabric mod: the VR player is a **giant**. Fly and hover over the world, rip chunks out of
+buildings and terrain, smash through towers with your hands, and pick up mobs and players to throw them, all
+with a real physics engine and ragdolls. Inspired by *Voxel Destruct 2* on Roblox.
+
+Built on **Vivecraft** (stereo rendering + head/hand tracking). Titan VR adds the gameplay on top.
+
+## Quick setup (5 minutes)
+
+1. **Install [Prism Launcher](https://prismlauncher.org/)** and add your Microsoft account.
+2. **Create an instance**: *Add Instance* → Minecraft **26.2** → Mod loader **Fabric** (latest loader) → OK.
+3. **Add the mods**: select the instance → *Edit* → *Mods* → *Download mods*, search for and select
+   - **Fabric API**
+   - **Vivecraft**
+
+   then press *Review and confirm* → OK.
+4. **Add Titan VR**: download `titan-vr-x.y.z.jar` from the
+   [latest release](https://github.com/franktheglock/titan-vr/releases/latest) and drag it onto the *Mods* list
+   (or drop it in the instance's `mods/` folder).
+5. **Recommended for VR**: *Edit* → *Settings* → *Java*: set maximum memory to **6-8 GB** and add the JVM
+   argument `-XX:+UseZGC` (fewer frame hitches; Vivecraft asks for it).
+6. Launch. You'll be a giant as soon as you're in VR.
+
+Not using Prism? Install [Fabric](https://fabricmc.net/use/installer/) for 26.2 and put
+[Fabric API](https://modrinth.com/mod/fabric-api), [Vivecraft](https://modrinth.com/mod/vivecraft) and the
+Titan VR jar in `.minecraft/mods/`.
+
+Works without a headset too: desktop players are normal-sized humans (Vivecraft runs fine in non-VR mode), and
+can try being a giant with `/titan giant on`.
+
+### Quest 3 / Quest 2
+
+Vivecraft uses OpenVR, so the chain is **Quest → Meta Quest Link (cable or Air Link) → SteamVR → Minecraft**.
+Start Quest Link, launch SteamVR, then start Minecraft and press the **VR** button on the title screen (or set
+Vivecraft to start in VR).
+
+### Playing on a server
+
+1. Set up a **Fabric server** for **26.2** ([installer](https://fabricmc.net/use/server/), needs Java 25).
+2. Put **Fabric API**, **Vivecraft** and **Titan VR** in the server's `mods/` folder. The server needs Vivecraft
+   too: that's how it receives everyone's headset and hand positions.
+3. Every player needs the same three mods (non-VR players too, or they won't see giants, debris and ragdolls).
+4. Run `op <your name>` in the server console for the admin commands below. Settings live in
+   `config/titanvr.json` and can be changed live with `/titan config`.
+
+## Playing as a giant
+
+VR players turn into giants automatically when they join (size 8 by default). Anyone can also use
+`/titan giant on [scale]`.
+
+Like Voxel Destruct 2, a giant has **no body**: everyone else sees a huge floating head (their skin) and two
+huge arms. The head and hands follow the giant's headset and controllers **live**: Vivecraft streams VR poses to
+every client and Titan VR draws them interpolated each frame, so desktop players see every head turn and hand
+gesture. Giants hover permanently and pass through blocks with their (invisible) body. Only their hands interact
+with the world.
+
+| Action | VR | Desktop |
+| --- | --- | --- |
+| Grab | Squeeze **grip** near something | Hold **R** (right hand) / **F** (left hand) |
+| Throw | Swing and let go of the grip | Let go: it flies where you look |
+| Smash | Swing your hands through blocks fast | Whip the camera around (hands are in front of you) |
+| Tool smash | Hold a pickaxe/axe/sword/mace/trident/spear and swing it | Same, holding the tool |
+| Giant projectiles | Shoot a bow/crossbow, throw a trident or snowball | Same |
+| Fly / move / turn | Normal Vivecraft controls (you always hover) | Normal creative flight |
+| Break / place blocks, use items | Normal Vivecraft controls (trigger, A) | Normal |
+| Resize | `/titan size <n>` | `/titan size <n>` |
+
+Grabbing only uses the grips, so every other button works as usual in Vivecraft. While you're a giant the grips
+don't scroll the hotbar; pick items by touching the hotbar with your hand. Squeezing a grip with nothing nearby
+does nothing.
+
+What you can grab:
+
+- **Blocks/terrain**: a chunk is torn out of the world around your hand and becomes one rigid body.
+- **Debris**: any flying or resting physics voxel.
+- **Players and most mobs**: full articulated **ragdolls** with a rig per body plan - humanoids (players,
+  zombies, skeletons, piglins), villagers/witches/illagers, cows, sheep, pigs, creepers, spiders and cave
+  spiders, wolves, chickens, foxes, cats, ocelots and iron golems.
+- **Other mobs** (and babies): they tumble as rigid ragdolls.
+- **Anything else**: items, primed TNT, boats, minecarts, arrows.
+
+**Tools have hitboxes.** Whatever a giant holds is giant too: a pickaxe, axe, shovel, hoe, sword, mace,
+trident or spear becomes a chain of colliders from your fist to its head, and the head moves faster than your
+hand, so it hits harder. The right tool bites deeper (a pickaxe through stone, an axe through wood), and a mace
+hits like a wrecking ball. Everyone else sees the giant-sized item in your hand.
+
+**Projectiles are giant too.** Arrows, tridents, snowballs and the like fired by a giant are scaled up to the
+giant's size, fly faster, bowl over everything their whole width passes through, punch through blocks while
+they still have the momentum, and land with a shockwave.
+
+**Getting flung on desktop**: when you're ragdolled, your first-person camera rides in your ragdoll's head and
+tumbles with it. When you land, you face the way you ended up.
+
+## The physics
+
+- Compound voxel **rigid bodies** with proper mass/inertia tensors, sequential-impulse contact solving with
+  friction and restitution, adaptive sub-stepping (no tunnelling through 1-block walls), and sleeping.
+- **Destruction**: anything hitting a block with enough kinetic energy breaks it (harder blocks need more),
+  turning it into more debris.
+- **Fracture**: chunks that slam into something hard shatter into smaller pieces.
+- **Structural collapse**: blocks that lose all support (cut a tower's base, chop a tree) fall as rigid
+  bodies. Natural stone counts as bedrock-solid ground, so terrain doesn't cave in.
+- **Ragdolls**: position-based-dynamics skeletons whose particles sit on the joints of each mob's vanilla model,
+  so every leg, arm and head swings on its own. They collide with the world, debris and the giant's hands,
+  take impact damage (credited to whoever threw them), and stand back up when they come to rest.
+- **Water and lava**: buoyancy from each body's density (logs float, stone sinks) and heavy drag, so a flung
+  player splashes down instead of slamming into the bottom of a lake.
+- **Rubble**: resting debris eventually turns back into placed blocks (`rubbleMode place`) or vanishes
+  (`despawn`).
+
+## Commands
+
+| Command | |
+| --- | --- |
+| `/titan` | Help |
+| `/titan giant [on [scale] \| off]` | Toggle giant mode for yourself |
+| `/titan giant <players> on [scale] \| off` | (op) for others |
+| `/titan size <1-16>` | Change size |
+| `/titan tower` | (op) Build a destructible tower in front of you |
+| `/titan ragdoll <targets> [speed]` | (op) Launch entities as ragdolls |
+| `/titan stats` | Body/voxel/ragdoll counts and physics cost |
+| `/titan clear` | (op) Remove all debris |
+| `/titan config <key> [value]` | (op) Live tuning; saved to `config/titanvr.json` |
+
+Useful config keys: `defaultGiantScale`, `throwMultiplier`, `destructionMultiplier`, `handSmashSpeed`,
+`structuralCollapse`, `rubbleMode`, `maxVoxels`, `impactDamageMultiplier`, `autoGiantVR`.
+
+## Building
+
+```
+gradlew build      # -> build/libs/titan-vr-0.1.0.jar
+gradlew runClient  # dev client (Vivecraft is on the dev classpath)
+gradlew runAutotest  # scripted smoke test (needs a flat creative world saved as run/saves/TitanTest)
+gradlew runServer    # dev dedicated server in run-server/ (accept the EULA in run-server/eula.txt)
+gradlew runJoinServer  # dev client that joins it
+```
+
+Requires JDK 25. Vivecraft is pulled from Modrinth's Maven repository.
+
+## License
+
+Apache License 2.0 (see [LICENSE](LICENSE)). Vivecraft is a separate project (LGPLv3) and is not included here.

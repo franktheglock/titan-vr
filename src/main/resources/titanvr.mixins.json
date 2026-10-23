@@ -1,0 +1,25 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.titanvr.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "EntityMixin",
+    "LivingEntityMixin",
+    "PlayerMixin",
+    "ProjectileMixin",
+    "ServerGamePacketListenerImplMixin"
+  ],
+  "client": [
+    "client.LivingEntityRendererMixin",
+    "client.HumanoidModelMixin",
+    "client.MinecraftMixin",
+    "client.CameraMixin",
+    "client.GameRendererMixin",
+    "client.EntityRendererMixin",
+    "client.EntityRenderDispatcherMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
