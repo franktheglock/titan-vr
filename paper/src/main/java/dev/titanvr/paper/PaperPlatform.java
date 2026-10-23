@@ -81,13 +81,17 @@ final class PaperPlatform implements Platform {
 	}
 
 	@Override
-	public Entity spawnBodyCarrier(ServerLevel level, RigidBody body) {
+	public Entity createBodyCarrier(ServerLevel level, RigidBody body) {
 		// A block display showing air: invisible to anyone without the mod, and never saved
 		Display.BlockDisplay carrier = new Display.BlockDisplay(EntityTypes.BLOCK_DISPLAY, level);
 		carrier.setPos(body.pos.x, body.pos.y, body.pos.z);
 		carrier.getBukkitEntity().setPersistent(false);
-		level.addFreshEntity(carrier, CreatureSpawnEvent.SpawnReason.CUSTOM);
 		return carrier;
+	}
+
+	@Override
+	public void addBodyCarrier(ServerLevel level, Entity carrier) {
+		level.addFreshEntity(carrier, CreatureSpawnEvent.SpawnReason.CUSTOM);
 	}
 
 	@Override

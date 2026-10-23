@@ -59,13 +59,17 @@ public final class FabricPlatform implements Platform {
 	}
 
 	@Override
-	public Entity spawnBodyCarrier(ServerLevel level, RigidBody body) {
+	public Entity createBodyCarrier(ServerLevel level, RigidBody body) {
 		PhysicsBodyEntity entity = new PhysicsBodyEntity(TitanEntities.PHYSICS_BODY, level);
 		entity.body = body;
 		entity.radius = body.shape.radius;
 		entity.setPos(body.pos.x, body.pos.y, body.pos.z);
-		level.addFreshEntity(entity);
 		return entity;
+	}
+
+	@Override
+	public void addBodyCarrier(ServerLevel level, Entity carrier) {
+		level.addFreshEntity(carrier);
 	}
 
 	@Override

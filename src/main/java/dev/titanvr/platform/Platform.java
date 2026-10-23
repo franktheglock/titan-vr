@@ -29,10 +29,13 @@ public interface Platform {
 	Collection<ServerPlayer> tracking(Entity entity);
 
 	/**
-	 * Spawns the entity that carries a debris body to clients (vanilla tracking decides who sees it); its id is what the
-	 * body packets refer to.
+	 * Creates (without adding it to the level) the entity that carries a debris body to clients (vanilla tracking decides
+	 * who sees it); its id is what the body packets refer to.
 	 */
-	Entity spawnBodyCarrier(ServerLevel level, RigidBody body);
+	Entity createBodyCarrier(ServerLevel level, RigidBody body);
+
+	/** Adds a carrier to the level. Tracking can start right away (Paper), so the body must already be findable by it. */
+	void addBodyCarrier(ServerLevel level, Entity carrier);
 
 	VrBridge vr();
 

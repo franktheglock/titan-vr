@@ -24,15 +24,15 @@ public final class ClientAutoTest {
 	/** Dev: screenshot every N ticks while in a world (-Dtitanvr.shotEvery=N), for checking multiplayer by eye. */
 	private static final int SHOT_EVERY = Integer.getInteger("titanvr.shotEvery", 0);
 	private static int shotTicks;
-	/** Dev: tick (counted like the screenshots) at which to grab and then throw (-Dtitanvr.grabAt=N). */
+	/** Dev: every N ticks (counted like the screenshots), grab and then throw (-Dtitanvr.grabAt=N). */
 	private static final int GRAB_AT = Integer.getInteger("titanvr.grabAt", 0);
 
 	public static void tick(Minecraft mc) {
 		if (GRAB_AT > 0 && mc.player != null) {
 			// Dev: grab with the right hand, then throw it where we look
-			if (shotTicks == GRAB_AT) {
+			if (shotTicks % GRAB_AT == 0 && shotTicks > 0) {
 				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(dev.titanvr.net.TitanNet.GrabC2S.press(0));
-			} else if (shotTicks == GRAB_AT + 40) {
+			} else if (shotTicks % GRAB_AT == 40 && shotTicks > GRAB_AT) {
 				var look = mc.player.getLookAngle().scale(25);
 				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.titanvr.net.TitanNet.GrabC2S((byte) 0, false, true,
 					new float[] {(float) look.x, (float) look.y + 6, (float) look.z, 0, 2, 0}));

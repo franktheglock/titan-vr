@@ -164,8 +164,9 @@ public final class PhysicsWorld {
 
 	void addBody(RigidBody body) {
 		if (body.isDebris()) {
-			body.entity = Platform.get().spawnBodyCarrier(this.level, body);
+			body.entity = Platform.get().createBodyCarrier(this.level, body);
 			this.bodyByEntityId.put(body.entity.getId(), body);
+			Platform.get().addBodyCarrier(this.level, body.entity);
 			this.voxelCount += body.shape.count();
 		}
 		// Always queued: bodies get created from inside loops over the body list (impacts, launches...).
